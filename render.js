@@ -165,7 +165,7 @@ const cubeVertexArray = new Float32Array([
         glMatrix.mat4.rotate(
             viewMatrix,
             viewMatrix,
-            1,
+            4,
             glMatrix.vec3.fromValues(Math.sin(now), Math.cos(now), 0)
         );
         const modelViewProjectionMatrix = glMatrix.mat4.create();
