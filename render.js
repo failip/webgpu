@@ -136,6 +136,43 @@ const cubeVertexArray = new Float32Array([
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
+    const uniformBufferSize = 4 * 16;
+    const uniformBuffer = device.createBuffer({
+        size: uniformBufferSize,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const uniformBindGroup = device.createBindGroup({
+        layout: renderPipeline.getBindGroupLayout(0),
+        entries: [
+            {
+                binding: 0,
+                resource: {
+                    buffer: uniformBuffer,
+                },
+            },
+        ],
+    });
+
+    const aspect = Math.abs(canvas.width / canvas.height);
+    const projectionMatrix = glMatrix.mat4.create();
+    glMatrix.mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
+
+    function getTransformationMatrix() {
+        const viewMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.translate(viewMatrix, viewMatrix, glMatrix.vec3.fromValues(0, 0, -4));
+        const now = Date.now() / 1000;
+        glMatrix.mat4.rotate(
+            viewMatrix,
+            viewMatrix,
+            1,
+            glMatrix.vec3.fromValues(Math.sin(now), Math.cos(now), 0)
+        );
+        const modelViewProjectionMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        return modelViewProjectionMatrix;
+    };
+
 
     function frame() {
         const commandEncoder = device.createCommandEncoder();
@@ -157,8 +194,17 @@ const cubeVertexArray = new Float32Array([
                 stencilStoreOp: 'store',
             }
         };
+        const transformationMatrix = getTransformationMatrix();
+        device.queue.writeBuffer(
+            uniformBuffer,
+            0,
+            transformationMatrix.buffer,
+            transformationMatrix.byteOffset,
+            transformationMatrix.byteLength,
+        );
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
+        passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
         passEncoder.draw(cubeVertexCount, 1, 0, 0);
         passEncoder.endPass();
