@@ -122,6 +122,12 @@ const cubeVertexArray = new Float32Array([
             topology: 'triangle-list',
             cullMode: 'back',
         },
+
+        depthStencil: {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
+        }
     });
 
     const depthTexture = device.createTexture({
@@ -143,6 +149,13 @@ const cubeVertexArray = new Float32Array([
                     storeOp: 'store',
                 },
             ],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthLoadValue: 1.0,
+                depthStoreOp: 'store',
+                stencilLoadValue: 0,
+                stencilStoreOp: 'store',
+            }
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
