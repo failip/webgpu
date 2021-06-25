@@ -1,3 +1,16 @@
 html {
-    background-color: rgb(80, 80, 80);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgb(80,80,80);
+    height: 100%;
+}
+
+h1 {
+    font-family:  Helvetica, Arial, sans-serif;
+    font-weight: 100;
+}
+
+canvas {
+    border-radius: 15px;
 }
