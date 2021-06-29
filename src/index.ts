@@ -33,6 +33,15 @@ async function fetchShader(shader_name) {
     new Float32Array(dataBuffer.getMappedRange()).set(mesh.vertexArray);
     dataBuffer.unmap();
 
+    var indexBuffer = device.createBuffer({
+        size: mesh.indexArray.byteLength,
+        usage: GPUBufferUsage.INDEX,
+        mappedAtCreation: true
+    });
+
+    new Uint16Array(indexBuffer.getMappedRange()).set(mesh.indexArray);
+    indexBuffer.unmap();
+    
     var swapChainFormat = "bgra8unorm";
     var swapChain = context.configure({
         device: device,
@@ -86,7 +95,7 @@ async function fetchShader(shader_name) {
     });
 
     const depthTexture = device.createTexture({
-        size: { width: canvas.width, height: canvas.height },
+        size: { width: canvas.clientWidth, height: canvas.clientHeight },
         format: 'depth24plus',
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
@@ -109,7 +118,7 @@ async function fetchShader(shader_name) {
         ],
     });
 
-    const aspect = Math.abs(canvas.width / canvas.height);
+    const aspect = Math.abs(canvas.clientWidth / canvas.clientHeight);
     const projectionMatrix =mat4.create();
    mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
 
@@ -161,7 +170,8 @@ async function fetchShader(shader_name) {
         passEncoder.setPipeline(renderPipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
-        passEncoder.draw(mesh.vertexCount, 1, 0, 0);
+        passEncoder.setIndexBuffer(indexBuffer, "uint16");
+        passEncoder.drawIndexed(mesh.vertexCount, 1, 0, 0);
         passEncoder.endPass();
 
 
