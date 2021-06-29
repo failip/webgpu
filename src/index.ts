@@ -1,61 +1,13 @@
-import {mat4, vec3} from 'gl-matrix'
+import {mat4, vec3} from 'gl-matrix';
+import { Mesh } from './ts/meshes/Mesh';
+import { Cube } from './ts/meshes/Cube';
+  
 
 async function fetchShader(shader_name) {
     const respone = await fetch('./shaders/' + shader_name);
     const shader = await respone.text();
     return shader;
 }
-
-const cubeVertexSize = 4 * 10; // Byte size of one cube vertex.
-const cubePositionOffset = 0;
-const cubeColorOffset = 4 * 4; // Byte offset of cube vertex color attribute.
-const cubeUVOffset = 4 * 8;
-const cubeVertexCount = 36;
-
-const cubeVertexArray = new Float32Array([
-    1, -1, 1, 1, 1, 0, 1, 1, 1, 1,
-    -1, -1, 1, 1, 0, 0, 1, 1, 0, 1,
-    -1, -1, -1, 1, 0, 0, 0, 1, 0, 0,
-    1, -1, -1, 1, 1, 0, 0, 1, 1, 0,
-    1, -1, 1, 1, 1, 0, 1, 1, 1, 1,
-    -1, -1, -1, 1, 0, 0, 0, 1, 0, 0,
-
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, -1, 1, 1, 1, 0, 1, 1, 0, 1,
-    1, -1, -1, 1, 1, 0, 0, 1, 0, 0,
-    1, 1, -1, 1, 1, 1, 0, 1, 1, 0,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, -1, -1, 1, 1, 0, 0, 1, 0, 0,
-
-    -1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
-    1, 1, -1, 1, 1, 1, 0, 1, 0, 0,
-    -1, 1, -1, 1, 0, 1, 0, 1, 1, 0,
-    -1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-    1, 1, -1, 1, 1, 1, 0, 1, 0, 0,
-
-    -1, -1, 1, 1, 0, 0, 1, 1, 1, 1,
-    -1, 1, 1, 1, 0, 1, 1, 1, 0, 1,
-    -1, 1, -1, 1, 0, 1, 0, 1, 0, 0,
-    -1, -1, -1, 1, 0, 0, 0, 1, 1, 0,
-    -1, -1, 1, 1, 0, 0, 1, 1, 1, 1,
-    -1, 1, -1, 1, 0, 1, 0, 1, 0, 0,
-
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    -1, 1, 1, 1, 0, 1, 1, 1, 0, 1,
-    -1, -1, 1, 1, 0, 0, 1, 1, 0, 0,
-    -1, -1, 1, 1, 0, 0, 1, 1, 0, 0,
-    1, -1, 1, 1, 1, 0, 1, 1, 1, 0,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-
-    1, -1, -1, 1, 1, 0, 0, 1, 1, 1,
-    -1, -1, -1, 1, 0, 0, 0, 1, 0, 1,
-    -1, 1, -1, 1, 0, 1, 0, 1, 0, 0,
-    1, 1, -1, 1, 1, 1, 0, 1, 1, 0,
-    1, -1, -1, 1, 1, 0, 0, 1, 1, 1,
-    -1, 1, -1, 1, 0, 1, 0, 1, 0, 0,
-]);
-
 
 (async () => {
     if (!navigator.gpu) {
@@ -69,15 +21,16 @@ const cubeVertexArray = new Float32Array([
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
+    let mesh : Mesh = new Cube();
     console.log(device);
 
     var dataBuffer = device.createBuffer({
-        size: cubeVertexArray.byteLength,
+        size: mesh.vertexArray.byteLength,
         usage: GPUBufferUsage.VERTEX,
         mappedAtCreation: true
     });
 
-    new Float32Array(dataBuffer.getMappedRange()).set(cubeVertexArray);
+    new Float32Array(dataBuffer.getMappedRange()).set(mesh.vertexArray);
     dataBuffer.unmap();
 
     var swapChainFormat = "bgra8unorm";
@@ -92,16 +45,16 @@ const cubeVertexArray = new Float32Array([
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: cubeVertexSize,
+                arrayStride: mesh.vertexSize,
                 attributes: [
                     {
                         format: "float32x4",
-                        offset: cubePositionOffset,
+                        offset: mesh.positionOffset,
                         shaderLocation: 0
                     },
                     {
                         format: "float32x2",
-                        offset: cubeUVOffset,
+                        offset: mesh.UVOffset,
                         shaderLocation: 1
                     },
                 ],
@@ -208,7 +161,7 @@ const cubeVertexArray = new Float32Array([
         passEncoder.setPipeline(renderPipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
-        passEncoder.draw(cubeVertexCount, 1, 0, 0);
+        passEncoder.draw(mesh.vertexCount, 1, 0, 0);
         passEncoder.endPass();
 
 
