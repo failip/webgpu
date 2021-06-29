@@ -1,0 +1,31 @@
+{
+  "name": "webgpu",
+  "version": "1.0.0",
+  "description": "",
+  "main": "render.js",
+  "scripts": {
+    "watch": "onchange \"src/**/*.ts\" -- npm run build:dev",
+    "build": "esbuild src/index.ts --bundle --minify --outfile=build/prod.js",
+    "build:dev": "esbuild src/index.ts --bundle --sourcemap --minify --outfile=build/dev.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/failip/webgpu.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/failip/webgpu/issues"
+  },
+  "homepage": "https://github.com/failip/webgpu#readme",
+  "devDependencies": {
+    "esbuild": "^0.12.12",
+    "onchange": "^7.1.0",
+    "typescript": "^4.3.4"
+  },
+  "dependencies": {
+    "@webgpu/types": "^0.1.4",
+    "gl-matrix": "^3.3.0"
+  }
+}

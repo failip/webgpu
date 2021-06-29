@@ -1,3 +1,5 @@
+import {mat4, vec3} from 'gl-matrix'
+
 async function fetchShader(shader_name) {
     const respone = await fetch('./shaders/' + shader_name);
     const shader = await respone.text();
@@ -155,21 +157,21 @@ const cubeVertexArray = new Float32Array([
     });
 
     const aspect = Math.abs(canvas.width / canvas.height);
-    const projectionMatrix = glMatrix.mat4.create();
-    glMatrix.mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
+    const projectionMatrix =mat4.create();
+   mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
 
     function getTransformationMatrix() {
-        const viewMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.translate(viewMatrix, viewMatrix, glMatrix.vec3.fromValues(0, 0, -4));
+        const viewMatrix =mat4.create();
+       mat4.translate(viewMatrix, viewMatrix,vec3.fromValues(0, 0, -4));
         const now = Date.now() / 1000;
-        glMatrix.mat4.rotate(
+       mat4.rotate(
             viewMatrix,
             viewMatrix,
             4,
-            glMatrix.vec3.fromValues(Math.sin(now), Math.cos(now), 0)
+           vec3.fromValues(Math.sin(now), Math.cos(now), 0)
         );
-        const modelViewProjectionMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        const modelViewProjectionMatrix =mat4.create();
+       mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
         return modelViewProjectionMatrix;
     };
 
