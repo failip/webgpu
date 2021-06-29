@@ -1,7 +1,7 @@
 import {Mesh} from './Mesh';
 
 export class Cube implements Mesh {
-    readonly vertexSize : number = 4 * 10; // Byte size of one cube vertex.
+    readonly vertexSize = 4 * 10; // Byte size of one cube vertex.
     readonly positionOffset = 0;
     readonly colorOffset = 4 * 4; // Byte offset of cube vertex color attribute.
     readonly UVOffset = 4 * 8;
