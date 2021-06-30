@@ -2,6 +2,7 @@ import { mat4, vec3 } from 'gl-matrix';
 import { IndexedMesh } from './ts/meshes/IndexedMesh';
 import { Cube } from './ts/meshes/Cube';
 import { Icosahedron } from './ts/meshes/Icosahedron';
+import { TexturedCube } from './ts/meshes/TexturedCube';
 
 
 async function fetchShader(shader_name) {
@@ -18,11 +19,11 @@ async function fetchShader(shader_name) {
 
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('basic.frag.wgsl')
+    var fragShader = await fetchShader('textured.frag.wgsl')
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: IndexedMesh = new Icosahedron();
+    let mesh: TexturedCube = new TexturedCube();
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -101,6 +102,30 @@ async function fetchShader(shader_name) {
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
+    let texture: GPUTexture;
+    {
+        const img = document.createElement('img');
+        img.src = mesh.texture;
+        await img.decode();
+        const imageBitmap = await createImageBitmap(img);
+        texture = device.createTexture({
+            size: [imageBitmap.width, imageBitmap.height, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        device.queue.copyExternalImageToTexture(
+            { source: imageBitmap },
+            { texture: texture },
+            [imageBitmap.width, imageBitmap.height, 1]
+        );
+    }
+
+    const sampler = device.createSampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+    });
+
     const uniformBufferSize = 4 * 16;
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
@@ -115,6 +140,14 @@ async function fetchShader(shader_name) {
                 resource: {
                     buffer: uniformBuffer,
                 },
+            },
+            {
+                binding: 1,
+                resource: sampler,
+            },
+            {
+                binding: 2,
+                resource: texture.createView(),
             },
         ],
     });
