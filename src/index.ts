@@ -1,8 +1,8 @@
-import {mat4, vec3} from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { Mesh } from './ts/meshes/Mesh';
 import { Cube } from './ts/meshes/Cube';
 import { Icosahedron } from './ts/meshes/Icosahedron';
-  
+
 
 async function fetchShader(shader_name) {
     const respone = await fetch('./shaders/' + shader_name);
@@ -22,7 +22,7 @@ async function fetchShader(shader_name) {
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh : Mesh = new Icosahedron();
+    let mesh: Mesh = new Icosahedron();
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -42,7 +42,7 @@ async function fetchShader(shader_name) {
 
     new Uint16Array(indexBuffer.getMappedRange()).set(mesh.indexArray);
     indexBuffer.unmap();
-    
+
     var swapChainFormat = "bgra8unorm";
     var swapChain = context.configure({
         device: device,
@@ -120,21 +120,21 @@ async function fetchShader(shader_name) {
     });
 
     const aspect = Math.abs(canvas.clientWidth / canvas.clientHeight);
-    const projectionMatrix =mat4.create();
-   mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
 
     function getTransformationMatrix() {
-        const viewMatrix =mat4.create();
-       mat4.translate(viewMatrix, viewMatrix,vec3.fromValues(0, 0, -4));
+        const viewMatrix = mat4.create();
+        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -4));
         const now = Date.now() / 1000;
-       mat4.rotate(
+        mat4.rotate(
             viewMatrix,
             viewMatrix,
             4,
-           vec3.fromValues(Math.sin(now), Math.cos(now), 0)
+            vec3.fromValues(Math.sin(now), Math.cos(now), 0)
         );
-        const modelViewProjectionMatrix =mat4.create();
-       mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        const modelViewProjectionMatrix = mat4.create();
+        mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
         return modelViewProjectionMatrix;
     };
 
