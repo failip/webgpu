@@ -3,13 +3,9 @@ import { IndexedMesh } from './ts/meshes/IndexedMesh';
 import { Cube } from './ts/meshes/Cube';
 import { Icosahedron } from './ts/meshes/Icosahedron';
 import { TexturedCube } from './ts/meshes/TexturedCube';
+import { fetchShader } from './ts/utility/Fetch';
 
 
-async function fetchShader(shader_name) {
-    const respone = await fetch('./shaders/' + shader_name);
-    const shader = await respone.text();
-    return shader;
-}
 
 (async () => {
     if (!navigator.gpu) {
@@ -20,10 +16,10 @@ async function fetchShader(shader_name) {
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
     var fragShader = await fetchShader('textured.frag.wgsl')
-    var vertShader = await fetchShader('basic.vert.wgsl')
+    var vertShader = await fetchShader('pbr.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: TexturedCube = new TexturedCube();
+    let mesh: TexturedCube = new TexturedCube("/textures/Cobble.png");
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -104,20 +100,17 @@ async function fetchShader(shader_name) {
 
     let texture: GPUTexture;
     {
-        const img = document.createElement('img');
-        img.src = mesh.texture;
-        await img.decode();
-        const imageBitmap = await createImageBitmap(img);
+        const mesh_texture = await mesh.texture;
         texture = device.createTexture({
-            size: [imageBitmap.width, imageBitmap.height, 1],
+            size: [mesh_texture.width, mesh_texture.height, 1],
             format: 'rgba8unorm',
             usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
         device.queue.copyExternalImageToTexture(
-            { source: imageBitmap },
+            { source: mesh_texture },
             { texture: texture },
-            [imageBitmap.width, imageBitmap.height, 1]
+            [mesh_texture.width, mesh_texture.height, 1]
         );
     }
 
