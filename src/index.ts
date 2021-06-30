@@ -1,5 +1,5 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { Mesh } from './ts/meshes/Mesh';
+import { IndexedMesh } from './ts/meshes/IndexedMesh';
 import { Cube } from './ts/meshes/Cube';
 import { Icosahedron } from './ts/meshes/Icosahedron';
 
@@ -22,7 +22,7 @@ async function fetchShader(shader_name) {
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: Mesh = new Icosahedron();
+    let mesh: IndexedMesh = new Icosahedron();
     console.log(device);
 
     var dataBuffer = device.createBuffer({

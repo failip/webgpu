@@ -1,6 +1,6 @@
-import { Mesh } from './Mesh';
+import { IndexedMesh } from './IndexedMesh';
 
-export class Cube implements Mesh {
+export class Cube implements IndexedMesh {
     readonly vertexSize = 4 * 10; // Byte size of one cube vertex.
     readonly positionOffset = 0;
     readonly colorOffset = 4 * 4; // Byte offset of cube vertex color attribute.
