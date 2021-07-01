@@ -17,7 +17,7 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('textured.frag.wgsl')
+    var fragShader = await fetchShader('pbr.frag.wgsl')
     var vertShader = await fetchShader('pbr.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
@@ -119,11 +119,11 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
     }
 
     const sampler = device.createSampler({
-        magFilter: 'linear',
-        minFilter: 'linear',
+        magFilter: 'nearest',
+        minFilter: 'nearest',
     });
 
-    const uniformBufferSize = 4 * 16;
+    const uniformBufferSize = 3 * 4 * 16;
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -170,10 +170,10 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
     Matrix4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
 
     function getTransformationMatrix() {
-        let viewMatrix = camera.transform.matrix;
+        let modelViewMatrix = camera.transform.matrix;
         const modelViewProjectionMatrix = Matrix4.create();
-        Matrix4.multiply(viewMatrix, viewMatrix, entity.transform.matrix);
-        Matrix4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        Matrix4.multiply(modelViewMatrix, modelViewMatrix, entity.transform.matrix);
+        Matrix4.multiply(modelViewProjectionMatrix, projectionMatrix, modelViewMatrix);
         return modelViewProjectionMatrix;
     };
 
@@ -198,14 +198,29 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
                 stencilStoreOp: 'store',
             }
         };
-        const transformationMatrix = getTransformationMatrix();
+        const modelMatrix = entity.transform.matrix;
         device.queue.writeBuffer(
             uniformBuffer,
             0,
-            transformationMatrix.buffer,
-            transformationMatrix.byteOffset,
-            transformationMatrix.byteLength,
+            modelMatrix.buffer,
+            modelMatrix.byteOffset,
+            modelMatrix.byteLength,
         );
+        const viewMatrix = camera.transform.matrix;
+        device.queue.writeBuffer(
+            uniformBuffer,
+            4 * 16,
+            viewMatrix.buffer,
+            viewMatrix.byteOffset,
+            viewMatrix.byteLength,
+        );
+        device.queue.writeBuffer(
+            uniformBuffer,
+            2 * 4 * 16,
+            projectionMatrix.buffer,
+            projectionMatrix.byteOffset,
+            projectionMatrix.byteLength,
+        )
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
