@@ -8,10 +8,5 @@ export class Camera extends WorldObject {
 
     constructor(transform: Transform) {
         super(transform);
-        this._viewMatrix = Matrix4.create();
-    }
-
-    public get viewMatrix() {
-        return Matrix4.fromRotationTranslationScale(this._viewMatrix, this.transform.rotation, this.transform.position, this.transform.scale);
     }
 }
