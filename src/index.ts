@@ -160,6 +160,10 @@ import { Camera } from './ts/renderer/Camera';
         canvas, this.onpointermove = null;
     }
 
+    canvas.onpointerleave = function (e) {
+        canvas, this.onpointermove = null;
+    }
+
 
 
     const aspect = Math.abs(canvas.clientWidth / canvas.clientHeight);
