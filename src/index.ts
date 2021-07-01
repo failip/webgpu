@@ -6,6 +6,9 @@ import { Entity } from './ts/entities/Entity';
 import { Transform } from './ts/entities/Transform';
 import { Camera } from './ts/renderer/Camera';
 import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
+import { Light } from './ts/renderer/Light';
+import { mesh } from './ts/meshes/mesh';
+import { Cube } from './ts/meshes/Cube';
 
 
 
@@ -21,9 +24,10 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
     var vertShader = await fetchShader('pbr.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: IndexedTexturedMesh = new TexturedCube("/textures/Cobble.png");
+    let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var light: Light = new Light(new Transform(Vector3.fromValues(3.0, 5.0, 4.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -64,10 +68,15 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
                         shaderLocation: 0
                     },
                     {
-                        format: "float32x2",
-                        offset: mesh.UVOffset,
+                        format: "float32x4",
+                        offset: mesh.colorOffset,
                         shaderLocation: 1
                     },
+                    {
+                        format: "float32x2",
+                        offset: mesh.UVOffset,
+                        shaderLocation: 2,
+                    }
                 ],
             },
         ],
@@ -86,7 +95,6 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
         primitive:
         {
             topology: 'triangle-list',
-            cullMode: 'back',
         },
 
         depthStencil: {
@@ -118,12 +126,28 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
         );
     }
 
+    let normal_map: GPUTexture;
+    {
+        const mesh_normal = await mesh.normalmap;
+        normal_map = device.createTexture({
+            size: [mesh_normal.width, mesh_normal.height, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        device.queue.copyExternalImageToTexture(
+            { source: mesh_normal },
+            { texture: normal_map },
+            [mesh_normal.width, mesh_normal.height, 1]
+        );
+    }
+
     const sampler = device.createSampler({
-        magFilter: 'nearest',
-        minFilter: 'nearest',
+        magFilter: 'linear',
+        minFilter: 'linear',
     });
 
-    const uniformBufferSize = 3 * 4 * 16;
+    const uniformBufferSize = 4 * 4 * 16 + 4 * 3;
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -146,6 +170,10 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
                 binding: 2,
                 resource: texture.createView(),
             },
+            {
+                binding: 3,
+                resource: normal_map.createView(),
+            }
         ],
     });
 
@@ -178,10 +206,11 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
     };
 
 
+
+
     function frame() {
         const commandEncoder = device.createCommandEncoder();
         const textureView = context.getCurrentTexture().createView();
-
         const renderPassDescriptor = {
             colorAttachments: [
                 {
@@ -221,6 +250,26 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
             projectionMatrix.byteOffset,
             projectionMatrix.byteLength,
         )
+        var inverseModelMatrix = entity.transform.matrix;
+        inverseModelMatrix = Matrix4.multiply(inverseModelMatrix, viewMatrix, inverseModelMatrix);
+        inverseModelMatrix = Matrix4.invert(inverseModelMatrix, inverseModelMatrix);
+        inverseModelMatrix = Matrix4.transpose(inverseModelMatrix, inverseModelMatrix);
+        device.queue.writeBuffer(
+            uniformBuffer,
+            3 * 4 * 16,
+            inverseModelMatrix.buffer,
+            inverseModelMatrix.byteOffset,
+            inverseModelMatrix.byteLength,
+        )
+        const lightPosition = light.transform.position
+        device.queue.writeBuffer(
+            uniformBuffer,
+            4 * 4 * 16,
+            lightPosition.buffer,
+            lightPosition.byteOffset,
+            lightPosition.byteLength,
+        )
+
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
@@ -228,7 +277,6 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
         passEncoder.setIndexBuffer(indexBuffer, "uint16");
         passEncoder.drawIndexed(mesh.indexArray.length, 1, 0, 0);
         passEncoder.endPass();
-
 
         device.queue.submit([commandEncoder.finish()]);
         window.requestAnimationFrame(frame);
