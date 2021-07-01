@@ -1,7 +1,5 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { IndexedMesh } from './ts/meshes/IndexedMesh';
-import { Cube } from './ts/meshes/Cube';
-import { Icosahedron } from './ts/meshes/Icosahedron';
+import { TexturedIcosahedron } from './ts/meshes/TexturedIcosahedron';
 import { TexturedCube } from './ts/meshes/TexturedCube';
 import { fetchShader } from './ts/utility/Fetch';
 
