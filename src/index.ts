@@ -5,6 +5,7 @@ import { fetchShader } from './ts/utility/Fetch';
 import { Entity } from './ts/entities/Entity';
 import { Transform } from './ts/entities/Transform';
 import { Camera } from './ts/renderer/Camera';
+import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 
 
 
@@ -20,11 +21,9 @@ import { Camera } from './ts/renderer/Camera';
     var vertShader = await fetchShader('pbr.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: TexturedCube = new TexturedCube("/textures/Cobble.png");
+    let mesh: IndexedTexturedMesh = new TexturedIcosahedron("/textures/Cobble.png");
     var entity: Entity = new Entity(new Transform(), mesh);
-    var rotation: Quaternion = Quaternion.create();
-    Quaternion.fromEuler(rotation, 0, 0, 0);
-    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), rotation, Vector3.fromValues(1.0, 1.0, 1.0)));
+    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -152,7 +151,7 @@ import { Camera } from './ts/renderer/Camera';
 
     canvas.onpointerdown = function (e) {
         canvas.onpointermove = function (event) {
-            Quaternion.fromEuler(entity.transform.rotation, event.offsetY, event.offsetX, 0);
+            Quaternion.fromEuler(entity.transform.rotation, -event.offsetY, -event.offsetX, 0);
         };
     }
 
