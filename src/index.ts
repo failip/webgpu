@@ -21,7 +21,7 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
     var vertShader = await fetchShader('pbr.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
-    let mesh: IndexedTexturedMesh = new TexturedIcosahedron("/textures/Cobble.png");
+    let mesh: IndexedTexturedMesh = new TexturedCube("/textures/Cobble.png");
     var entity: Entity = new Entity(new Transform(), mesh);
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
@@ -151,7 +151,7 @@ import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 
     canvas.onpointerdown = function (e) {
         canvas.onpointermove = function (event) {
-            Quaternion.fromEuler(entity.transform.rotation, -event.offsetY, -event.offsetX, 0);
+            Quaternion.fromEuler(entity.transform.rotation, event.offsetY, event.offsetX, 0);
         };
     }
 
