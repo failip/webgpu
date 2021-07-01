@@ -1,7 +1,10 @@
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 as Matrix4, vec3 as Vector3, quat as Quaternion } from 'gl-matrix';
 import { TexturedIcosahedron } from './ts/meshes/TexturedIcosahedron';
 import { TexturedCube } from './ts/meshes/TexturedCube';
 import { fetchShader } from './ts/utility/Fetch';
+import { Entity } from './ts/entities/Entity';
+import { Transform } from './ts/entities/Transform';
+import { Camera } from './ts/renderer/Camera';
 
 
 
@@ -18,6 +21,8 @@ import { fetchShader } from './ts/utility/Fetch';
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
     let mesh: TexturedCube = new TexturedCube("/textures/Cobble.png");
+    var entity: Entity = new Entity(new Transform(), mesh);
+    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
 
     var dataBuffer = device.createBuffer({
@@ -144,21 +149,15 @@ import { fetchShader } from './ts/utility/Fetch';
     });
 
     const aspect = Math.abs(canvas.clientWidth / canvas.clientHeight);
-    const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
+    const projectionMatrix = Matrix4.create();
+    Matrix4.perspective(projectionMatrix, (2 * Math.PI) / 5, aspect, 1, 100.0);
 
     function getTransformationMatrix() {
-        const viewMatrix = mat4.create();
-        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -4));
         const now = Date.now() / 1000;
-        mat4.rotate(
-            viewMatrix,
-            viewMatrix,
-            4,
-            vec3.fromValues(Math.sin(now), Math.cos(now), 0)
-        );
-        const modelViewProjectionMatrix = mat4.create();
-        mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+        Quaternion.fromEuler(camera.transform.rotation, 180 * Math.sin(now), 180 * Math.cos(now), 1.0);
+        let viewMatrix = camera.viewMatrix;
+        const modelViewProjectionMatrix = Matrix4.create();
+        Matrix4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
         return modelViewProjectionMatrix;
     };
 
