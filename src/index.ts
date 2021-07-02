@@ -7,9 +7,8 @@ import { Transform } from './ts/entities/Transform';
 import { Camera } from './ts/renderer/Camera';
 import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 import { Light } from './ts/renderer/Light';
-import { mesh } from './ts/meshes/mesh';
 import { Cube } from './ts/meshes/Cube';
-
+import { loadGLTFEmbedded } from './ts/gltf/gltfLoader';
 
 
 (async () => {
@@ -17,11 +16,13 @@ import { Cube } from './ts/meshes/Cube';
         alert("WebGPU is not enabled.");
         return;
     }
-
+    const gltf_response = await loadGLTFEmbedded('models/Box_embedded.gltf');
+    const gltf_object = gltf_response[0];
+    const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('pbr.frag.wgsl')
-    var vertShader = await fetchShader('pbr.vert.wgsl')
+    var fragShader = await fetchShader('basic.frag.wgsl')
+    var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
@@ -29,23 +30,25 @@ import { Cube } from './ts/meshes/Cube';
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     var light: Light = new Light(new Transform(Vector3.fromValues(3.0, 5.0, 4.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
+    console.log(gltf_object);
+    entity.transform.scale = Vector3.fromValues(1.5, 1.5, 1.5);
 
     var dataBuffer = device.createBuffer({
-        size: mesh.vertexArray.byteLength,
+        size: 288,
         usage: GPUBufferUsage.VERTEX,
-        mappedAtCreation: true
+        mappedAtCreation: true,
     });
-
-    new Float32Array(dataBuffer.getMappedRange()).set(mesh.vertexArray);
+    let vertex_buffer_data = new Float32Array(gltf_buffer.slice(288, 576));
+    new Float32Array(dataBuffer.getMappedRange()).set(vertex_buffer_data);
     dataBuffer.unmap();
 
     var indexBuffer = device.createBuffer({
-        size: mesh.indexArray.byteLength,
+        size: 36 * 2,
         usage: GPUBufferUsage.INDEX,
         mappedAtCreation: true
     });
 
-    new Uint16Array(indexBuffer.getMappedRange()).set(mesh.indexArray);
+    new Uint16Array(indexBuffer.getMappedRange()).set(new Uint16Array(gltf_buffer.slice(576)));
     indexBuffer.unmap();
 
     var swapChainFormat = "bgra8unorm";
@@ -60,23 +63,13 @@ import { Cube } from './ts/meshes/Cube';
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: mesh.vertexSize,
+                arrayStride: 12,
                 attributes: [
                     {
-                        format: "float32x4",
-                        offset: mesh.positionOffset,
+                        format: "float32x3",
+                        offset: 0,
                         shaderLocation: 0
                     },
-                    {
-                        format: "float32x4",
-                        offset: mesh.colorOffset,
-                        shaderLocation: 1
-                    },
-                    {
-                        format: "float32x2",
-                        offset: mesh.UVOffset,
-                        shaderLocation: 2,
-                    }
                 ],
             },
         ],
@@ -162,18 +155,6 @@ import { Cube } from './ts/meshes/Cube';
                     buffer: uniformBuffer,
                 },
             },
-            {
-                binding: 1,
-                resource: sampler,
-            },
-            {
-                binding: 2,
-                resource: texture.createView(),
-            },
-            {
-                binding: 3,
-                resource: normal_map.createView(),
-            }
         ],
     });
 
@@ -275,7 +256,7 @@ import { Cube } from './ts/meshes/Cube';
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint16");
-        passEncoder.drawIndexed(mesh.indexArray.length, 1, 0, 0);
+        passEncoder.drawIndexed(36, 1, 0, 0);
         passEncoder.endPass();
 
         device.queue.submit([commandEncoder.finish()]);
