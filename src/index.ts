@@ -8,7 +8,7 @@ import { Camera } from './ts/renderer/Camera';
 import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 import { Light } from './ts/renderer/Light';
 import { Cube } from './ts/meshes/Cube';
-import { loadGLTFEmbedded } from './ts/gltf/gltfLoader';
+import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
 
 
 (async () => {
@@ -58,7 +58,7 @@ import { loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         mappedAtCreation: true
     });
 
-    new Uint16Array(indexBuffer.getMappedRange()).set(new Uint16Array(gltf_buffer.slice(576)));
+    new Uint16Array(indexBuffer.getMappedRange()).set(createBuffers(gltf_object, gltf_buffer));
     indexBuffer.unmap();
 
     var swapChainFormat = "bgra8unorm";
