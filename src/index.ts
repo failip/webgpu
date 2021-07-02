@@ -28,18 +28,28 @@ import { loadGLTFEmbedded } from './ts/gltf/gltfLoader';
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
-    var light: Light = new Light(new Transform(Vector3.fromValues(3.0, 5.0, 4.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var light: Light = new Light(new Transform(Vector3.fromValues(4.0, 3.0, 34.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
     console.log(gltf_object);
-    entity.transform.scale = Vector3.fromValues(1.5, 1.5, 1.5);
+    entity.transform.scale = Vector3.fromValues(2.0, 2.0, 2.0);
 
     var dataBuffer = device.createBuffer({
-        size: 288,
+        size: 576,
         usage: GPUBufferUsage.VERTEX,
         mappedAtCreation: true,
     });
     let vertex_buffer_data = new Float32Array(gltf_buffer.slice(288, 576));
-    new Float32Array(dataBuffer.getMappedRange()).set(vertex_buffer_data);
+    let normal_buffer_data = new Float32Array(gltf_buffer.slice(0, 288));
+    let vertex_normal_data = new Float32Array(144);
+    for (let i = 0; i < 24; i++) {
+        vertex_normal_data[6 * i] = vertex_buffer_data[3 * i];
+        vertex_normal_data[6 * i + 1] = vertex_buffer_data[3 * i + 1];
+        vertex_normal_data[6 * i + 2] = vertex_buffer_data[3 * i + 2];
+        vertex_normal_data[6 * i + 3] = normal_buffer_data[3 * i];
+        vertex_normal_data[6 * i + 4] = normal_buffer_data[3 * i + 1];
+        vertex_normal_data[6 * i + 5] = normal_buffer_data[3 * i + 2];
+    }
+    new Float32Array(dataBuffer.getMappedRange()).set(vertex_normal_data);
     dataBuffer.unmap();
 
     var indexBuffer = device.createBuffer({
@@ -63,12 +73,17 @@ import { loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: 12,
+                arrayStride: 24,
                 attributes: [
                     {
                         format: "float32x3",
                         offset: 0,
                         shaderLocation: 0
+                    },
+                    {
+                        format: "float32x3",
+                        offset: 12,
+                        shaderLocation: 1
                     },
                 ],
             },
