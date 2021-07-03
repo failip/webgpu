@@ -8,7 +8,8 @@ import { Camera } from './ts/renderer/Camera';
 import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 import { Light } from './ts/renderer/Light';
 import { Cube } from './ts/meshes/Cube';
-import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
+import { createMesh, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
+import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
 
 
 (async () => {
@@ -16,7 +17,7 @@ import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         alert("WebGPU is not enabled.");
         return;
     }
-    const gltf_response = await loadGLTFEmbedded('models/Box_embedded.gltf');
+    const gltf_response = await loadGLTFEmbedded('models/BoxInterleaved.gltf');
     const gltf_object = gltf_response[0];
     const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
@@ -38,19 +39,6 @@ import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         usage: GPUBufferUsage.VERTEX,
         mappedAtCreation: true,
     });
-    let vertex_buffer_data = new Float32Array(gltf_buffer.slice(288, 576));
-    let normal_buffer_data = new Float32Array(gltf_buffer.slice(0, 288));
-    let vertex_normal_data = new Float32Array(144);
-    for (let i = 0; i < 24; i++) {
-        vertex_normal_data[6 * i] = vertex_buffer_data[3 * i];
-        vertex_normal_data[6 * i + 1] = vertex_buffer_data[3 * i + 1];
-        vertex_normal_data[6 * i + 2] = vertex_buffer_data[3 * i + 2];
-        vertex_normal_data[6 * i + 3] = normal_buffer_data[3 * i];
-        vertex_normal_data[6 * i + 4] = normal_buffer_data[3 * i + 1];
-        vertex_normal_data[6 * i + 5] = normal_buffer_data[3 * i + 2];
-    }
-    new Float32Array(dataBuffer.getMappedRange()).set(vertex_normal_data);
-    dataBuffer.unmap();
 
     var indexBuffer = device.createBuffer({
         size: 36 * 2,
@@ -58,7 +46,11 @@ import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         mappedAtCreation: true
     });
 
-    new Uint16Array(indexBuffer.getMappedRange()).set(createBuffers(gltf_object, gltf_buffer));
+
+    let gltfmesh: NormalMeshImpl = createMesh(gltf_object, gltf_buffer);
+    new Float32Array(dataBuffer.getMappedRange()).set(gltfmesh.vertexArray);
+    dataBuffer.unmap();
+    new Uint16Array(indexBuffer.getMappedRange()).set(gltfmesh.indexArray);
     indexBuffer.unmap();
 
     var swapChainFormat = "bgra8unorm";
@@ -73,16 +65,16 @@ import { createBuffers, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: 24,
+                arrayStride: gltfmesh.vertexSize,
                 attributes: [
                     {
                         format: "float32x3",
-                        offset: 0,
+                        offset: gltfmesh.positionOffset,
                         shaderLocation: 0
                     },
                     {
                         format: "float32x3",
-                        offset: 12,
+                        offset: gltfmesh.normalOffset,
                         shaderLocation: 1
                     },
                 ],
