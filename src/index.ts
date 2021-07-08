@@ -17,42 +17,43 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
         alert("WebGPU is not enabled.");
         return;
     }
-    const gltf_response = await loadGLTFEmbedded('models/BoxInterleaved.gltf');
+    const gltf_response = await loadGLTFEmbedded('models/sphere.gltf');
     const gltf_object = gltf_response[0];
     const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('basic.frag.wgsl')
+    var fragShader = await fetchShader('blinnphong.frag.wgsl')
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
-    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
-    var light: Light = new Light(new Transform(Vector3.fromValues(4.0, 3.0, 34.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var light: Light = new Light(new Transform(Vector3.fromValues(0.1, 0.1, 5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
     console.log(gltf_object);
-    entity.transform.scale = Vector3.fromValues(2.0, 2.0, 2.0);
+    entity.transform.scale = Vector3.fromValues(1.0, 1.0, 1.0);
 
+
+    let gltfmesh: NormalMeshImpl = createMesh(gltf_object, gltf_buffer);
+    console.log(gltfmesh.vertexArray.length);
+    console.log(gltfmesh.indexArray.length);
     var dataBuffer = device.createBuffer({
-        size: 576,
+        size: gltfmesh.vertexArray.byteLength,
         usage: GPUBufferUsage.VERTEX,
         mappedAtCreation: true,
     });
 
     var indexBuffer = device.createBuffer({
-        size: 36 * 2,
+        size: gltfmesh.indexArray.byteLength,
         usage: GPUBufferUsage.INDEX,
         mappedAtCreation: true
     });
 
-
-    let gltfmesh: NormalMeshImpl = createMesh(gltf_object, gltf_buffer);
     new Float32Array(dataBuffer.getMappedRange()).set(gltfmesh.vertexArray);
     dataBuffer.unmap();
     new Uint16Array(indexBuffer.getMappedRange()).set(gltfmesh.indexArray);
     indexBuffer.unmap();
-
     var swapChainFormat = "bgra8unorm";
     var swapChain = context.configure({
         device: device,
@@ -65,16 +66,16 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: gltfmesh.vertexSize,
+                arrayStride: 24,
                 attributes: [
                     {
                         format: "float32x3",
-                        offset: gltfmesh.positionOffset,
+                        offset: 0,
                         shaderLocation: 0
                     },
                     {
                         format: "float32x3",
-                        offset: gltfmesh.normalOffset,
+                        offset: 12,
                         shaderLocation: 1
                     },
                 ],
@@ -263,7 +264,7 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint16");
-        passEncoder.drawIndexed(36, 1, 0, 0);
+        passEncoder.drawIndexed(gltfmesh.indexArray.length, 1, 0, 0);
         passEncoder.endPass();
 
         device.queue.submit([commandEncoder.finish()]);

@@ -15,14 +15,20 @@ fn main([[location(0)]] UV: vec2<f32>,
         [[location(2)]] Normal: vec4<f32>,
         ) -> [[location(0)]] vec4<f32> {
 
-    var ambient_strength: f32 = 0.1;
+    var normal: vec4<f32> = Normal;
+    var light_direction: vec4<f32> = normalize(uniforms.viewMatrix * vec4<f32>(uniforms.lightPosition, 1.0) - FragPosition);
+    var view_direction: vec4<f32> = normalize(FragPosition);
+    var halfway_direction: vec4<f32> = normalize(light_direction + view_direction);
+
+    var spec: f32 = pow(max(dot(normal, halfway_direction), 0.0), 255.0);
+    var specular: vec4<f32> = light_color * spec;
+
+    var ambient_strength: f32 = 0.5;
     var ambient: vec4<f32> = ambient_strength * light_color;
 
-    var norm: vec4<f32> = normalize(uniforms.inverseModelMatrix * Normal);
-    var lightDir: vec4<f32> = normalize(uniforms.viewMatrix * vec4<f32>(uniforms.lightPosition, 1.0) - FragPosition);
-    var diff: f32 = max(dot(lightDir, norm), 0.0);
+    var diff: f32 = max(dot(light_direction, normal), 0.0);
     var diffuse: vec4<f32> = diff * light_color;
     
-    var result: vec4<f32> = (ambient + diffuse);
-    return FragPosition;
+    var result: vec4<f32> = ambient + diffuse + specular;
+    return result;
 }

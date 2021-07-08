@@ -20,7 +20,7 @@ fn main([[location(0)]] pos: vec3<f32>,
      -> VertexOutput{
        var output : VertexOutput;
        output.Position = uniforms.projectionMatrix * uniforms.viewMatrix * uniforms.modelMatrix * vec4<f32>(pos,1.0);
-       output.FragPosition = 0.5 * (vec4<f32>(pos,1.0) + vec4<f32>(1.0, 1.0, 1.0, 1.0));
-       output.Normal = vec4<f32>(normal,0.0);
+       output.FragPosition = uniforms.viewMatrix * uniforms.modelMatrix * vec4<f32>(pos,1.0);
+       output.Normal = normalize(uniforms.inverseModelMatrix * vec4<f32>(normal,1.0));
   return output;
 }
