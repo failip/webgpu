@@ -1,4 +1,4 @@
-import { mat4 as Matrix4, vec3 as Vector3, quat as Quaternion } from 'gl-matrix';
+import { mat4 as Matrix4, vec3 as Vector3, quat as Quaternion, vec4 as Vector4 } from 'gl-matrix';
 import { TexturedIcosahedron } from './ts/meshes/TexturedIcosahedron';
 import { TexturedCube } from './ts/meshes/TexturedCube';
 import { fetchShader } from './ts/utility/Fetch';
@@ -17,22 +17,22 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
         alert("WebGPU is not enabled.");
         return;
     }
-    const gltf_response = await loadGLTFEmbedded('models/sphere.gltf');
+    const gltf_response = await loadGLTFEmbedded('models/torus.gltf');
     const gltf_object = gltf_response[0];
     const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('blinnphong.frag.wgsl')
+    var fragShader = await fetchShader('diffuse.frag.wgsl')
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("gpupresent");
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
-    var light: Light = new Light(new Transform(Vector3.fromValues(0.1, 0.1, 5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var light: Light = new Light(new Transform(Vector3.fromValues(10, 10, 10), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
     console.log(gltf_object);
-    entity.transform.scale = Vector3.fromValues(1.0, 1.0, 1.0);
+    entity.transform.scale = Vector3.fromValues(2.0, 2.0, 2.0);
 
 
     let gltfmesh: NormalMeshImpl = createMesh(gltf_object, gltf_buffer);
@@ -148,7 +148,7 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
         minFilter: 'linear',
     });
 
-    const uniformBufferSize = 4 * 4 * 16 + 4 * 3;
+    const uniformBufferSize = 4 * 4 * 16 + 2 * 4 * 4;
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -250,7 +250,7 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
             inverseModelMatrix.byteOffset,
             inverseModelMatrix.byteLength,
         )
-        const lightPosition = light.transform.position
+        const lightPosition = Vector4.fromValues(light.transform.position[0], light.transform.position[1], light.transform.position[2], 1.0);
         device.queue.writeBuffer(
             uniformBuffer,
             4 * 4 * 16,
@@ -258,6 +258,15 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
             lightPosition.byteOffset,
             lightPosition.byteLength,
         )
+        const viewPosition = Vector4.fromValues(camera.transform.position[0], camera.transform.position[1], camera.transform.position[2], 1.0);
+        device.queue.writeBuffer(
+            uniformBuffer,
+            4 * 4 * 16 + 4 * 4,
+            viewPosition.buffer,
+            viewPosition.byteOffset,
+            viewPosition.byteLength,
+        )
+
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
