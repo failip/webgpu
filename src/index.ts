@@ -1,4 +1,4 @@
-import { mat4 as Matrix4, vec3 as Vector3, quat as Quaternion } from 'gl-matrix';
+import { mat4 as Matrix4, vec3 as Vector3, quat as Quaternion, vec4 as Vector4 } from 'gl-matrix';
 import { TexturedIcosahedron } from './ts/meshes/TexturedIcosahedron';
 import { TexturedCube } from './ts/meshes/TexturedCube';
 import { fetchShader } from './ts/utility/Fetch';
@@ -7,47 +7,54 @@ import { Transform } from './ts/entities/Transform';
 import { Camera } from './ts/renderer/Camera';
 import { IndexedTexturedMesh } from './ts/meshes/IndexedTexturedMesh';
 import { Light } from './ts/renderer/Light';
-import { mesh } from './ts/meshes/mesh';
 import { Cube } from './ts/meshes/Cube';
-
+import { createMesh, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
+import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
+import { Renderer } from './ts/renderer/Renderer';
 
 
 (async () => {
+    var renderer: Renderer;
     if (!navigator.gpu) {
-        alert("WebGPU is not enabled.");
-        return;
+        console.log("WebGPU not enabled in this browser.")
     }
-
+    const gltf_response = await loadGLTFEmbedded('models/monkey.gltf');
+    const gltf_object = gltf_response[0];
+    const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('pbr.frag.wgsl')
-    var vertShader = await fetchShader('pbr.vert.wgsl')
+    var fragShader = await fetchShader('diffuse.frag.wgsl')
+    var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
-    var context = canvas.getContext("gpupresent");
+    var context = canvas.getContext("webgpu");
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
-    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -4), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
-    var light: Light = new Light(new Transform(Vector3.fromValues(3.0, 5.0, 4.0), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
+    var light: Light = new Light(new Transform(Vector3.fromValues(10, 10, 10), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
     console.log(device);
+    console.log(gltf_object);
+    entity.transform.scale = Vector3.fromValues(2.0, 2.0, 2.0);
 
+
+    let gltfmesh: NormalMeshImpl = createMesh(gltf_object, gltf_buffer);
+    console.log(gltfmesh.vertexArray.length);
+    console.log(gltfmesh.indexArray.length);
     var dataBuffer = device.createBuffer({
-        size: mesh.vertexArray.byteLength,
+        size: gltfmesh.vertexArray.byteLength,
         usage: GPUBufferUsage.VERTEX,
-        mappedAtCreation: true
+        mappedAtCreation: true,
     });
 
-    new Float32Array(dataBuffer.getMappedRange()).set(mesh.vertexArray);
-    dataBuffer.unmap();
-
     var indexBuffer = device.createBuffer({
-        size: mesh.indexArray.byteLength,
+        size: gltfmesh.indexArray.byteLength,
         usage: GPUBufferUsage.INDEX,
         mappedAtCreation: true
     });
 
-    new Uint16Array(indexBuffer.getMappedRange()).set(mesh.indexArray);
+    new Float32Array(dataBuffer.getMappedRange()).set(gltfmesh.vertexArray);
+    dataBuffer.unmap();
+    new Uint16Array(indexBuffer.getMappedRange()).set(gltfmesh.indexArray);
     indexBuffer.unmap();
-
     var swapChainFormat = "bgra8unorm";
     var swapChain = context.configure({
         device: device,
@@ -60,23 +67,18 @@ import { Cube } from './ts/meshes/Cube';
         entryPoint: "main",
         buffers: [
             {
-                arrayStride: mesh.vertexSize,
+                arrayStride: 24,
                 attributes: [
                     {
-                        format: "float32x4",
-                        offset: mesh.positionOffset,
+                        format: "float32x3",
+                        offset: 0,
                         shaderLocation: 0
                     },
                     {
-                        format: "float32x4",
-                        offset: mesh.colorOffset,
+                        format: "float32x3",
+                        offset: 12,
                         shaderLocation: 1
                     },
-                    {
-                        format: "float32x2",
-                        offset: mesh.UVOffset,
-                        shaderLocation: 2,
-                    }
                 ],
             },
         ],
@@ -147,7 +149,7 @@ import { Cube } from './ts/meshes/Cube';
         minFilter: 'linear',
     });
 
-    const uniformBufferSize = 4 * 4 * 16 + 4 * 3;
+    const uniformBufferSize = 4 * 4 * 16 + 2 * 4 * 4;
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -162,18 +164,6 @@ import { Cube } from './ts/meshes/Cube';
                     buffer: uniformBuffer,
                 },
             },
-            {
-                binding: 1,
-                resource: sampler,
-            },
-            {
-                binding: 2,
-                resource: texture.createView(),
-            },
-            {
-                binding: 3,
-                resource: normal_map.createView(),
-            }
         ],
     });
 
@@ -261,7 +251,7 @@ import { Cube } from './ts/meshes/Cube';
             inverseModelMatrix.byteOffset,
             inverseModelMatrix.byteLength,
         )
-        const lightPosition = light.transform.position
+        const lightPosition = Vector4.fromValues(light.transform.position[0], light.transform.position[1], light.transform.position[2], 1.0);
         device.queue.writeBuffer(
             uniformBuffer,
             4 * 4 * 16,
@@ -269,13 +259,22 @@ import { Cube } from './ts/meshes/Cube';
             lightPosition.byteOffset,
             lightPosition.byteLength,
         )
+        const viewPosition = Vector4.fromValues(camera.transform.position[0], camera.transform.position[1], camera.transform.position[2], 1.0);
+        device.queue.writeBuffer(
+            uniformBuffer,
+            4 * 4 * 16 + 4 * 4,
+            viewPosition.buffer,
+            viewPosition.byteOffset,
+            viewPosition.byteLength,
+        )
+
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(renderPipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, dataBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint16");
-        passEncoder.drawIndexed(mesh.indexArray.length, 1, 0, 0);
+        passEncoder.drawIndexed(gltfmesh.indexArray.length, 1, 0, 0);
         passEncoder.endPass();
 
         device.queue.submit([commandEncoder.finish()]);
