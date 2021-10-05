@@ -10,14 +10,15 @@ import { Light } from './ts/renderer/Light';
 import { Cube } from './ts/meshes/Cube';
 import { createMesh, loadGLTFEmbedded } from './ts/gltf/gltfLoader';
 import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
+import { Renderer } from './ts/renderer/Renderer';
 
 
 (async () => {
+    var renderer: Renderer;
     if (!navigator.gpu) {
-        alert("WebGPU is not enabled.");
-        return;
+        console.log("WebGPU not enabled in this browser.")
     }
-    const gltf_response = await loadGLTFEmbedded('models/torus.gltf');
+    const gltf_response = await loadGLTFEmbedded('models/monkey.gltf');
     const gltf_object = gltf_response[0];
     const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
@@ -25,7 +26,7 @@ import { NormalMeshImpl } from './ts/meshes/NormalMeshImpl';
     var fragShader = await fetchShader('diffuse.frag.wgsl')
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
-    var context = canvas.getContext("gpupresent");
+    var context = canvas.getContext("webgpu");
     let mesh: IndexedTexturedMesh = new TexturedCube("textures/Bricks071_1K-PNG/Bricks071_1K_Color.png", "textures/Bricks071_1K-PNG/Bricks071_1K_Normal.png");
     var entity: Entity = new Entity(new Transform(), mesh);
     var camera: Camera = new Camera(new Transform(Vector3.fromValues(0, 0, -5), Quaternion.fromValues(0, 0, 0, 1), Vector3.fromValues(1.0, 1.0, 1.0)));
