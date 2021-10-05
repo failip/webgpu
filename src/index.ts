@@ -18,12 +18,12 @@ import { Renderer } from './ts/renderer/Renderer';
     if (!navigator.gpu) {
         console.log("WebGPU not enabled in this browser.")
     }
-    const gltf_response = await loadGLTFEmbedded('models/monkey.gltf');
+    const gltf_response = await loadGLTFEmbedded('models/sphere.gltf');
     const gltf_object = gltf_response[0];
     const gltf_buffer: ArrayBuffer = gltf_response[1];
     var adapter = await navigator.gpu.requestAdapter();
     var device = await adapter.requestDevice();
-    var fragShader = await fetchShader('diffuse.frag.wgsl')
+    var fragShader = await fetchShader('blinnphong.frag.wgsl')
     var vertShader = await fetchShader('basic.vert.wgsl')
     var canvas = document.getElementById("webgpu-canvas");
     var context = canvas.getContext("webgpu");

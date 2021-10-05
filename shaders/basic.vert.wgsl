@@ -21,7 +21,7 @@ fn main([[location(0)]] pos: vec3<f32>,
      -> VertexOutput{
        var output : VertexOutput;
        output.Position = uniforms.projectionMatrix * uniforms.viewMatrix * uniforms.modelMatrix * vec4<f32>(pos,1.0);
-       output.FragPosition = uniforms.modelMatrix * vec4<f32>(pos,1.0);
-       output.Normal = vec4<f32>(normal, 0.0);
+       output.FragPosition = uniforms.viewMatrix * uniforms.modelMatrix * vec4<f32>(pos,1.0);
+       output.Normal = uniforms.viewMatrix * uniforms.modelMatrix * vec4<f32>(normal, 0.0);
   return output;
 }
